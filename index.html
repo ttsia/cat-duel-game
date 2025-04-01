@@ -1,0 +1,99 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <title>Cat Duel</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <style>
+        body { font-family: sans-serif; text-align: center; background-color: #f0f0f0; }
+        #battlefield { margin-top: 30px; }
+        .cat { display: inline-block; margin: 0 30px; }
+        .hp-bar { width: 100px; height: 20px; background: red; margin: 10px auto; }
+        #actions button { margin: 5px; padding: 10px 20px; }
+        #log { margin-top: 20px; height: 100px; overflow-y: auto; border: 1px solid #ccc; background: #fff; padding: 5px; }
+    </style>
+</head>
+
+<body>
+    <h1>🐱 Cat Duel 🐱</h1>
+    <h3 id="playerName">Player</h3>
+
+    <div id="battlefield">
+        <div class="cat">
+            <h3>Orange Cat</h3>
+            <div id="cat1-hp" class="hp-bar"></div>
+        </div>
+
+        <div class="cat">
+            <h3>Gray Cat</h3>
+            <div id="cat2-hp" class="hp-bar"></div>
+        </div>
+    </div>
+
+    <div id="actions">
+        <button onclick="attack()">Attack</button>
+        <button onclick="block()">Block</button>
+        <button onclick="special()">Cat Special</button>
+    </div>
+
+    <div id="log"></div>
+
+    <script src="https://telegram.org/js/telegram-web-app.js"></script>
+    <script>
+        let cat1HP = 100;
+        let cat2HP = 100;
+
+        Telegram.WebApp.ready();
+
+        if (Telegram.WebApp.initDataUnsafe.user) {
+            document.getElementById("playerName").innerText = "Player: " + Telegram.WebApp.initDataUnsafe.user.first_name;
+        }
+
+        function updateHP() {
+            document.getElementById("cat1-hp").style.width = cat1HP + "px";
+            document.getElementById("cat2-hp").style.width = cat2HP + "px";
+        }
+
+        function log(message) {
+            const logDiv = document.getElementById("log");
+            logDiv.innerHTML += message + "<br>";
+            logDiv.scrollTop = logDiv.scrollHeight;
+        }
+
+        function attack() {
+            let damage = Math.floor(Math.random() * 10) + 5;
+            cat2HP = Math.max(0, cat2HP - damage);
+            log("Orange Cat attacks! Gray Cat loses " + damage + " HP.");
+            checkWin();
+            updateHP();
+        }
+
+        function block() {
+            log("Orange Cat blocks! Nothing happens.");
+        }
+
+        function special() {
+            let damage = Math.floor(Math.random() * 20) + 10;
+            cat2HP = Math.max(0, cat2HP - damage);
+            log("Orange Cat uses Cat Special! Gray Cat loses " + damage + " HP.");
+            checkWin();
+            updateHP();
+        }
+
+        function checkWin() {
+            if (cat2HP <= 0) {
+                log("🎉 Orange Cat Wins!");
+                disableButtons();
+            }
+        }
+
+        function disableButtons() {
+            document.querySelectorAll("#actions button").forEach(btn => btn.disabled = true);
+        }
+
+        updateHP();
+    </script>
+</body>
+
+</html>
