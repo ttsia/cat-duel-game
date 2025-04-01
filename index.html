@@ -43,26 +43,22 @@
 
     <script src="https://telegram.org/js/telegram-web-app.js"></script>
     <script>
-
-        // ----------------------------
-        // Dummy fallback for non-Telegram
-        // ----------------------------
         let currentUser = null;
-        
-        if (typeof Telegram !== 'undefined' && Telegram.WebApp && Telegram.WebApp.initDataUnsafe && Telegram.WebApp.initDataUnsafe.user) {
-            currentUser = Telegram.WebApp.initDataUnsafe.user.username;
-        } else {
-            // fallback for testing outside Telegram
-            currentUser = prompt("Enter your username (testing outside Telegram):");
-        }
-        
-        // ----------------------------
-        // URL Parameters
-        // ----------------------------
         const urlParams = new URLSearchParams(window.location.search);
         const player1 = urlParams.get("player1") || "Player1";
         const player2 = urlParams.get("player2") || "Player2";
-        
+        const simulateAs = urlParams.get("as"); // <--- NEW
+
+
+        if (typeof Telegram !== 'undefined' && Telegram.WebApp && Telegram.WebApp.initDataUnsafe && Telegram.WebApp.initDataUnsafe.user) {
+            currentUser = Telegram.WebApp.initDataUnsafe.user.username;
+        } else if (simulateAs) {
+            currentUser = simulateAs; // <-- automatic for dev
+            alert("DEBUG MODE: You are simulating as " + currentUser);
+        } else {
+            currentUser = prompt("Not in Telegram.\nEnter 'player1' or 'player2':\n" + player1 + " or " + player2);
+        }
+                
         // ----------------------------
         // State Variables (declared before usage)
         // ----------------------------
