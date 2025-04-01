@@ -43,96 +43,133 @@
 
     <script src="https://telegram.org/js/telegram-web-app.js"></script>
     <script>
+
+        // ----------------------------
+        // Dummy fallback for non-Telegram
+        // ----------------------------
+        let currentUser = null;
+        
+        if (typeof Telegram !== 'undefined' && Telegram.WebApp && Telegram.WebApp.initDataUnsafe && Telegram.WebApp.initDataUnsafe.user) {
+            currentUser = Telegram.WebApp.initDataUnsafe.user.username;
+        } else {
+            // fallback for testing outside Telegram
+            currentUser = prompt("Enter your username (testing outside Telegram):");
+        }
+        
+        // ----------------------------
+        // URL Parameters
+        // ----------------------------
         const urlParams = new URLSearchParams(window.location.search);
-        const player1 = urlParams.get("player1");
-        const player2 = urlParams.get("player2");
-
-        const currentPlayer = Telegram.WebApp.initDataUnsafe.user.username;
-
-        document.getElementById("playerNames").innerText = `${player1} 🐱 vs 🐱 ${player2}`;
-        document.getElementById("cat1-name").innerText = player1;
-        document.getElementById("cat2-name").innerText = player2;
-
+        const player1 = urlParams.get("player1") || "Player1";
+        const player2 = urlParams.get("player2") || "Player2";
+        
+        // ----------------------------
+        // State Variables (declared before usage)
+        // ----------------------------
         let cat1HP = 100;
         let cat2HP = 100;
-        let turn = "player1";
-
+        let turn = "player1";  // ✅ declared early
+        
+        // ----------------------------
+        // WebApp Ready
+        // ----------------------------
+        if (typeof Telegram !== 'undefined' && Telegram.WebApp) {
+            Telegram.WebApp.ready();
+        }
+        
+        // ----------------------------
+        // UI Initialization
+        // ----------------------------
+        document.addEventListener("DOMContentLoaded", function() {
+            document.getElementById("playerNames").innerText = `${player1} 🐱 vs 🐱 ${player2}`;
+            document.getElementById("cat1-name").innerText = player1;
+            document.getElementById("cat2-name").innerText = player2;
+            updateHP();
+        });
+        
+        // ----------------------------
+        // Game Logic
+        // ----------------------------
         function updateHP() {
             document.getElementById("cat1-hp").style.width = cat1HP + "px";
             document.getElementById("cat2-hp").style.width = cat2HP + "px";
         }
-
+        
         function log(message) {
             const logDiv = document.getElementById("log");
             logDiv.innerHTML += message + "<br>";
             logDiv.scrollTop = logDiv.scrollHeight;
         }
-
+        
         function playerAction(action) {
-            if ((turn === "player1" && currentPlayer !== player1) || (turn === "player2" && currentPlayer !== player2)) {
-                log("It's not your turn!");
+            if (!currentUser) {
+                alert("No valid player.");
                 return;
             }
-
+        
+            if ((turn === "player1" && currentUser !== player1) || (turn === "player2" && currentUser !== player2)) {
+                log("❌ It's not your turn!");
+                return;
+            }
+        
             if (turn === "player1") {
-                performAction("Orange Cat", "Gray Cat", "cat2", action);
+                performAction(player1, player2, "cat2", action);
                 turn = "player2";
             } else {
-                performAction("Gray Cat", "Orange Cat", "cat1", action);
+                performAction(player2, player1, "cat1", action);
                 turn = "player1";
             }
         }
-
+        
         function performAction(attacker, defender, defenderId, action) {
             switch(action) {
                 case 'attack':
                     var damage = rand(5, 10);
                     updateHPValue(defenderId, -damage);
-                    log(`${attacker} attacks! ${defender} loses ${damage} HP.`);
+                    log(`🐾 ${attacker} attacks! ${defender} loses ${damage} HP.`);
                     break;
                 case 'block':
-                    log(`${attacker} blocks! Gains minor defense.`);
-                    updateHPValue(attacker === "Orange Cat" ? "cat1" : "cat2", 5);
+                    log(`🛡️ ${attacker} blocks! Gains minor defense.`);
+                    updateHPValue(attacker === player1 ? "cat1" : "cat2", 5);
                     break;
                 case 'special':
                     const specials = ["Mega Scratch", "Loud Meow", "Super Bite"];
                     var special = specials[Math.floor(Math.random() * specials.length)];
                     var specialDamage = rand(10, 20);
                     updateHPValue(defenderId, -specialDamage);
-                    log(`${attacker} uses ${special}! ${defender} loses ${specialDamage} HP.`);
+                    log(`✨ ${attacker} uses ${special}! ${defender} loses ${specialDamage} HP.`);
                     break;
             }
             animate(defenderId);
             checkWin();
             updateHP();
         }
-
+        
         function updateHPValue(cat, delta) {
             if (cat === "cat1") cat1HP = Math.min(100, Math.max(0, cat1HP + delta));
             if (cat === "cat2") cat2HP = Math.min(100, Math.max(0, cat2HP + delta));
         }
-
+        
         function checkWin() {
             if (cat1HP <= 0) { log(`🎉 ${player2} wins!`); disableButtons(); }
             if (cat2HP <= 0) { log(`🎉 ${player1} wins!`); disableButtons(); }
         }
-
+        
         function disableButtons() {
             document.querySelectorAll("#actions button").forEach(btn => btn.disabled = true);
         }
-
+        
         function animate(catId) {
             const cat = document.getElementById(catId);
             cat.classList.add("shake");
             setTimeout(() => cat.classList.remove("shake"), 300);
         }
-
+        
         function rand(min, max) {
             return Math.floor(Math.random() * (max - min + 1)) + min;
         }
-
-        updateHP();
-    </script>
+        
+        </script>
 </body>
 
 </html>
