@@ -7,48 +7,55 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <style>
         body { font-family: sans-serif; text-align: center; background-color: #f0f0f0; }
-        #battlefield { margin-top: 30px; }
-        .cat { display: inline-block; margin: 0 30px; }
-        .hp-bar { width: 100px; height: 20px; background: red; margin: 10px auto; }
+        #battlefield { margin-top: 30px; position: relative; height: 200px; }
+        .cat { display: inline-block; margin: 0 30px; transition: transform 0.2s; }
+        .hp-bar { width: 100px; height: 20px; background: red; margin: 10px auto; border: 1px solid #000; transition: width 0.3s; }
         #actions button { margin: 5px; padding: 10px 20px; }
-        #log { margin-top: 20px; height: 100px; overflow-y: auto; border: 1px solid #ccc; background: #fff; padding: 5px; }
+        #log { margin-top: 20px; height: 120px; overflow-y: auto; border: 1px solid #ccc; background: #fff; padding: 5px; }
+        .shake { animation: shake 0.3s; }
+        @keyframes shake { 0% { transform: translate(0px, 0px); } 25% { transform: translate(5px, 0); } 50% { transform: translate(-5px, 0); } 75% { transform: translate(5px, 0); } 100% { transform: translate(0,0); } }
     </style>
 </head>
 
 <body>
     <h1>🐱 Cat Duel 🐱</h1>
-    <h3 id="playerName">Player</h3>
+    <h3 id="playerNames"></h3>
 
     <div id="battlefield">
-        <div class="cat">
-            <h3>Orange Cat</h3>
+        <div class="cat" id="cat1">
+            <h3 id="cat1-name"></h3>
             <div id="cat1-hp" class="hp-bar"></div>
         </div>
 
-        <div class="cat">
-            <h3>Gray Cat</h3>
+        <div class="cat" id="cat2">
+            <h3 id="cat2-name"></h3>
             <div id="cat2-hp" class="hp-bar"></div>
         </div>
     </div>
 
     <div id="actions">
-        <button onclick="attack()">Attack</button>
-        <button onclick="block()">Block</button>
-        <button onclick="special()">Cat Special</button>
+        <button onclick="playerAction('attack')">Attack</button>
+        <button onclick="playerAction('block')">Block</button>
+        <button onclick="playerAction('special')">Cat Special</button>
     </div>
 
     <div id="log"></div>
 
     <script src="https://telegram.org/js/telegram-web-app.js"></script>
     <script>
+        const urlParams = new URLSearchParams(window.location.search);
+        const player1 = urlParams.get("player1");
+        const player2 = urlParams.get("player2");
+
+        const currentPlayer = Telegram.WebApp.initDataUnsafe.user.username;
+
+        document.getElementById("playerNames").innerText = `${player1} 🐱 vs 🐱 ${player2}`;
+        document.getElementById("cat1-name").innerText = player1;
+        document.getElementById("cat2-name").innerText = player2;
+
         let cat1HP = 100;
         let cat2HP = 100;
-
-        Telegram.WebApp.ready();
-
-        if (Telegram.WebApp.initDataUnsafe.user) {
-            document.getElementById("playerName").innerText = "Player: " + Telegram.WebApp.initDataUnsafe.user.first_name;
-        }
+        let turn = "player1";
 
         function updateHP() {
             document.getElementById("cat1-hp").style.width = cat1HP + "px";
@@ -61,35 +68,67 @@
             logDiv.scrollTop = logDiv.scrollHeight;
         }
 
-        function attack() {
-            let damage = Math.floor(Math.random() * 10) + 5;
-            cat2HP = Math.max(0, cat2HP - damage);
-            log("Orange Cat attacks! Gray Cat loses " + damage + " HP.");
+        function playerAction(action) {
+            if ((turn === "player1" && currentPlayer !== player1) || (turn === "player2" && currentPlayer !== player2)) {
+                log("It's not your turn!");
+                return;
+            }
+
+            if (turn === "player1") {
+                performAction("Orange Cat", "Gray Cat", "cat2", action);
+                turn = "player2";
+            } else {
+                performAction("Gray Cat", "Orange Cat", "cat1", action);
+                turn = "player1";
+            }
+        }
+
+        function performAction(attacker, defender, defenderId, action) {
+            switch(action) {
+                case 'attack':
+                    var damage = rand(5, 10);
+                    updateHPValue(defenderId, -damage);
+                    log(`${attacker} attacks! ${defender} loses ${damage} HP.`);
+                    break;
+                case 'block':
+                    log(`${attacker} blocks! Gains minor defense.`);
+                    updateHPValue(attacker === "Orange Cat" ? "cat1" : "cat2", 5);
+                    break;
+                case 'special':
+                    const specials = ["Mega Scratch", "Loud Meow", "Super Bite"];
+                    var special = specials[Math.floor(Math.random() * specials.length)];
+                    var specialDamage = rand(10, 20);
+                    updateHPValue(defenderId, -specialDamage);
+                    log(`${attacker} uses ${special}! ${defender} loses ${specialDamage} HP.`);
+                    break;
+            }
+            animate(defenderId);
             checkWin();
             updateHP();
         }
 
-        function block() {
-            log("Orange Cat blocks! Nothing happens.");
-        }
-
-        function special() {
-            let damage = Math.floor(Math.random() * 20) + 10;
-            cat2HP = Math.max(0, cat2HP - damage);
-            log("Orange Cat uses Cat Special! Gray Cat loses " + damage + " HP.");
-            checkWin();
-            updateHP();
+        function updateHPValue(cat, delta) {
+            if (cat === "cat1") cat1HP = Math.min(100, Math.max(0, cat1HP + delta));
+            if (cat === "cat2") cat2HP = Math.min(100, Math.max(0, cat2HP + delta));
         }
 
         function checkWin() {
-            if (cat2HP <= 0) {
-                log("🎉 Orange Cat Wins!");
-                disableButtons();
-            }
+            if (cat1HP <= 0) { log(`🎉 ${player2} wins!`); disableButtons(); }
+            if (cat2HP <= 0) { log(`🎉 ${player1} wins!`); disableButtons(); }
         }
 
         function disableButtons() {
             document.querySelectorAll("#actions button").forEach(btn => btn.disabled = true);
+        }
+
+        function animate(catId) {
+            const cat = document.getElementById(catId);
+            cat.classList.add("shake");
+            setTimeout(() => cat.classList.remove("shake"), 300);
+        }
+
+        function rand(min, max) {
+            return Math.floor(Math.random() * (max - min + 1)) + min;
         }
 
         updateHP();
